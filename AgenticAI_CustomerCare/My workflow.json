@@ -1,0 +1,211 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 12,
+              "triggerAtMinute": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -480,
+        -40
+      ],
+      "id": "f6f8cf86-314c-4423-85e9-060d79f2733d",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "kkaiengineer@gmail.com",
+          "mode": "list",
+          "cachedResultName": "kkaiengineer@gmail.com"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        -200,
+        -40
+      ],
+      "id": "cb4311f9-def1-4701-b3a3-10914c46b77e",
+      "name": "Get many events",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "APfBWsNhFzkpz6Mc",
+          "name": "Google Calendar account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Appointment Details  {{ $json.description }}\nstart Time :{{ $json.start.dateTime }}\n\nend time :{{ $json.end.dateTime }}\n",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an assistant. Generate structured JSON with the following fields:\n\nname: Full name\n\nphone_number: String\n\nreason: Reason for the appointment\n\nstart_time: ISO 8601 datetime\n\nend_time: ISO 8601 datetime (format is date and time)\n\nemail: Email address\n\nOutput only the exact JSON — no comments, no extra text."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        20,
+        -60
+      ],
+      "id": "a4e340d6-7f06-43d1-a5e3-497f25b6cf0c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        40,
+        160
+      ],
+      "id": "62845117-2497-471d-b4e4-1f60b11a59c4",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "79b4iiXd8Zy1XOdb",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": {\n      \"type\": \"string\"\n    },\n    \"email\": {\n      \"type\": \"string\",\n      \"format\": \"email\"\n    },\n    \"phone_number\": {\n      \"type\": \"string\"\n    },\n    \"reason\": {\n      \"type\": \"string\"\n    },\n    \"start_time\": {\n      \"type\": \"string\",\n      \"format\": \"date-time\"\n    },\n    \"end_time\": {\n      \"type\": \"string\",\n      \"format\": \"date-time\"\n    }\n  },\n  \"required\": [\"name\", \"email\", \"reason\", \"start_time\", \"end_time\"]\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        180,
+        160
+      ],
+      "id": "c4c45c4e-9c62-49f0-97f3-3c4869d34f58",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.retellai.com/v2/create-phone-call",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpCustomAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer key_f883aadbe54f9d2325d0daba0e4e"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"from_number\": \"+14172381874\",\n  \"to_number\": \"+919897090248\",\n  \"retell_llm_dynamic_variables\": {\n    \"name\": \"{{$json.output.name}}\",\n    \"phone_number\": \"{{$json.output.phone_number}}\",\n    \"reason\": \"{{$json.output.reason}}\",\n    \"start_time\": \"{{$json.output.start_time}}\",\n    \"end_time\": \"{{$json.output.end_time}}\"\n  },\n  \"override_agent_id\": \"agent_ae967f89f4709102b1e3ee37a1\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        380,
+        -40
+      ],
+      "id": "c55627fc-e62a-477f-88eb-a53037682803",
+      "name": "HTTP Request",
+      "credentials": {
+        "httpCustomAuth": {
+          "id": "QIYSouu2wJLfiknR",
+          "name": "Custom Auth account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get many events",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many events": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "c5f0ba1e-3f0b-4b79-a831-158be012c272",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6e6c655dc83ddd5a5f29f9472d503e6d871c1c44393b8a3a10120c67b5fbec86"
+  },
+  "id": "S9OckEO61FwztWHf",
+  "tags": []
+}
